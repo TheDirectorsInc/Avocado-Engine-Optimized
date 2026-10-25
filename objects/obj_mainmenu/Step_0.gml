@@ -1,0 +1,185 @@
+fade_alpha = approach(fade_alpha, 0, 0.1)
+roomPaletteIndex = approach(roomPaletteIndex, selectedFile + 1, 1 / 3)
+switch scene
+{
+	case -2:
+		get_menu_input()
+		if key_jump_pressed
+		{
+			dark = false
+			FMODevent_oneshot("event:/Sfx/UI/Mainmenu/turnon")
+			scene = -1
+			alarm[0] = 60
+			alarm[3] = 5
+			if created == true
+			{
+				fmod_studio_event_instance_start(music)
+				fmod_studio_event_instance_set_paused(music, false)
+			}
+		}
+	case -1:
+		break
+	case 0:
+		get_menu_input()
+		if instance_exists(obj_option)
+			exit;
+		if key_start_pressed
+		{
+			FMODevent_oneshot("event:/Sfx/UI/Pause/menuselect")
+			instance_create(x, y, obj_option)
+			exit;
+		}
+		hudAlpha = approach(hudAlpha, 1, 0.1)
+		var q = saveFiles[selectedFile]
+		selectBuffer = approach(selectBuffer, 0, 1)
+		if key_jump_pressed && selectBuffer == 0
+		{
+			global.saveFile = q.savePath
+			alarm[1] = 60 * 3
+			FMODevent_oneshot("event:/Sfx/General/Collects/bigcollect", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+			FMODevent_oneshot("event:/Sfx/UI/Mainmenu/selectmovie")
+			scene = 1
+			alarm[2] = 120
+			fmod_studio_event_instance_stop(music, FMOD_STUDIO_STOP_MODE.ALLOWFADEOUT)
+			TVsprite = spr_mainmenu_tv_empty
+			TVBackSprite = spr_mainmenu_tv1_pick
+			TVindex = 0
+			alarm[6] = 60 * 1
+			exit;
+		}
+		var move = key_right_pressed + key_left_pressed
+		if move != 0
+		{
+			selectedFile += -move
+			FMODevent_oneshot("event:/Sfx/UI/Pause/menumove")
+			//FMODevent_oneshot("event:/Sfx/UI/Mainmenu/changemovie")
+			TVsprite = spr_mainmenu_tvStatic
+			TVBackSprite = -4
+			selectedFile = clamp(selectedFile, 0, 2)
+			if saveFiles[selectedFile].created == true
+				alarm[5] = 6
+			else
+				alarm[5] = -1
+			exit;
+		}
+		for (var i = 0; i < array_length(saveFiles); i++)
+		{
+			var q = saveFiles[i]
+			q.faceAlpha = approach(q.faceAlpha, (selectedFile == q.file) && q.created ? 1 : 0, 0.1)
+			q.statusAlpha = approach(q.statusAlpha, (selectedFile == q.file) && q.created ? 1 : 0, 0.1)
+			var _targetPos = q.movie.saveX + 80
+			if selectedFile != q.file
+				q.movie.state = 0
+			else
+			{
+				if q.movie.state == 0
+				{
+					q.movie.state = 1
+				}
+				if q.movie.state == 1
+				{
+					_targetPos = q.movie.saveX + 130
+					if q.movie.x >= q.movie.saveX + 100
+						q.movie.state = 2
+				}
+				if q.movie.state == 2
+				{
+					_targetPos = q.movie.saveX + 95
+				}
+			}
+			q.movie.x = lerp(q.movie.x, selectedFile == q.file ? _targetPos : q.movie.saveX, 0.25)
+			q.movie.y = lerp(q.movie.y, selectedFile == q.file ? q.movie.saveY - 5 : q.movie.saveY, 0.25)
+		}
+		
+		if key_grab_pressed
+		{
+			scene = 3
+			selectedMenu = 0
+			quitText = choose(
+			"ARE YOU SURE YOU WANT TO QUIT?",
+			"DONT LEAVE ME! IM SORRY!",
+			"YOULL BE BACK, RIGHT?",
+			"PLEASE DONT LEAAVE..",
+			"I LOVE YOU THOUGH!",
+			"DONT QUIT PLEASE!")
+		}
+		
+		if key_taunt_pressed
+		{
+			var q = saveFiles[selectedFile]
+			if file_exists(q.savePath)
+				file_delete(q.savePath)
+			saveFiles[selectedFile] = new createSave(selectedFile)
+			TVsprite = spr_mainmenu_tvStatic
+		}
+		break
+	case 1:
+		hudAlpha = approach(hudAlpha, 0, 0.15)
+		for (var i = 0; i < array_length(saveFiles); i++)
+		{
+			var q = saveFiles[i]
+			if selectedFile != q.file
+			{
+				q.movie.alpha = approach(q.movie.alpha, 0, 0.05)
+				q.movie.x = q.movie.saveX + irandom_range(-1, 1)
+				q.movie.y = q.movie.saveY + irandom_range(-1, 1)
+			}
+			else
+				q.movie.scale = approach(q.movie.scale, 2.5, 0.001)
+			
+		}
+		break
+	case 3:
+		get_menu_input()
+		var move = key_right_pressed + key_left_pressed
+		if move != 0
+		{
+			selectedMenu += -move
+			selectedMenu = clamp(selectedMenu, 0, 1)
+			FMODevent_oneshot("event:/Sfx/UI/Pause/menumove")
+			exit;
+		}
+		if key_jump_pressed
+		{
+			if selectedMenu == 0
+			{
+				selectBuffer = 10
+				scene = 0
+				exit;
+			}
+			else if selectedMenu == 0
+				game_end()
+			exit;
+		}
+		break
+	case 2:
+		hudAlpha = approach(hudAlpha, 0, 0.1)
+		for (var i = 0; i < array_length(saveFiles); i++)
+		{
+			var q = saveFiles[i]
+			if selectedFile != q.file
+			{
+				q.movie.alpha = approach(q.movie.alpha, 0, 1)
+				q.movie.x = q.movie.saveX + irandom_range(-1, 1)
+				q.movie.y = q.movie.saveY + irandom_range(-1, 1)
+			}
+			else
+			{
+				q.movie.scale = approach(q.movie.scale, 100, q.movie.scaleSpeed)
+				q.movie.scaleSpeed += 1 / 5
+				if moviefade > 0
+					moviefade -= 5
+				else
+					moviefade = 0
+				moviefadeC = make_color_rgb(moviefade, moviefade, moviefade)
+			}
+			
+		}
+		break
+		
+}
+if TVsprite == spr_mainmenu_tv
+			TVindex = 0
+		else {
+			TVindex += 0.35
+		}

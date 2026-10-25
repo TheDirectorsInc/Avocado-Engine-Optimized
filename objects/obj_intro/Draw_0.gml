@@ -1,0 +1,1 @@
+draw_sprite_ext(spr_logo, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, logo_xs * 0.3, logo_ys * 0.3, 0, c_white, logo_alpha)

@@ -1,0 +1,20 @@
+if !surface_exists(fadeSurface)
+	fadeSurface = surface_create(SCREEN_WIDTH, SCREEN_HEIGHT)
+surface_set_target(fadeSurface)
+draw_clear_alpha(c_black, 0)
+draw_set_color(c_black)
+draw_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, false)
+draw_set_color(c_white)
+gpu_set_blendmode(bm_subtract)
+var _s = circleSize / 9
+draw_sprite_ext(spr_transition_mildred, 0, SCREEN_WIDTH / 2 + (96 * _s), SCREEN_HEIGHT / 2 - (270 * _s), circleSize, circleSize, 0, c_white, 1)
+reset_blendmmode()
+surface_reset_target()
+
+draw_set_alpha(1)
+draw_surface(fadeSurface, 0, 0)
+draw_set_alpha(1)
+
+draw_set_alpha(ratingAlpha)
+draw_sprite(spr_ratingLabel, eForEveryone, SCREEN_WIDTH - (960 - 828), SCREEN_HEIGHT - (540 - 406))
+draw_set_alpha(1)

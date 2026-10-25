@@ -1,0 +1,361 @@
+if !global.option_hud
+	exit;
+
+if global.escape.party
+{
+	discoAlpha = approach(discoAlpha, 0.05, 0.05 / 60 * 4)
+	var _color = discoColors[discoColor]
+	draw_set_alpha(discoAlpha)
+	gpu_set_blendmode(bm_add)
+	draw_rectangle_colour(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, _color, _color, _color, _color, false)
+	reset_blendmmode()
+	draw_set_alpha(1)
+}
+else {
+	discoAlpha = 0
+}
+
+if (!ds_list_empty(collectVis))
+{
+	for (var i = 0; i < ds_list_size(collectVis); i++)
+	{
+		var q = ds_list_find_value(collectVis, i)
+		with q
+		{
+			draw_sprite_ext(sprite_index, 0, x, y, 1, 1, 0, c_white, 1)
+		}
+	}
+}
+
+with kettle
+{
+	var cmb = 0
+	if global.combo.amt >= 25
+		cmb = 1
+	if global.combo.amt >= 50
+		cmb = 2
+	
+	index += (0.25 * cmb)
+	if cmb == 0
+		index = 0
+	draw_sprite(spr_kettleScore, index, kx, ky - offset)
+	draw_set_font(global.kettleFont)
+	draw_set_halign(fa_left)
+	
+	var _xx = kx + 24 - (string_width(global.collect) / 2 / 1.1) - 4
+	if lastcollect != global.collect
+	{
+		colorarray = array_create(string_length(global.collect), 0)
+		
+		for (var i = 0; i < array_length(colorarray); i++)
+		{
+			colorarray[i] = random_range(0, 1)
+		}
+		lastcollect = global.collect
+	}
+	for (var i = 0; i < string_length(global.collect); i++)
+	{
+		var _yOffset = (i + 1) % 2 == 0 ? -5 : 0
+		shader_set(shd_pal_swapper)
+		pal_swap_set(pal_kettlefont, colorarray[i], false)
+		draw_text(floor(_xx), floor(ky + 12 - offset + _yOffset), string_char_at(global.collect, i + 1))
+		_xx += (string_width(global.collect) / string_length(global.collect)) / 1.1
+		shader_reset()
+	}
+	//draw_text(kx + 16, ky + 12 - offset, global.collect)
+	var rankindex = 0;
+	if global.time_attack && global.time_attack_started
+	{
+		var _rank = time_attack_get_rank(global.time_attack_timer)
+		rankindex = time_attack_get_rank_index(_rank)
+	}
+	else if scr_Prank()
+		rankindex = 5
+	else if global.collect >= global.Srank
+		rankindex = 4
+	else if global.collect >= global.Arank
+		rankindex = 3
+	else if global.collect >= global.Brank
+		rankindex = 2
+	else if global.collect >= global.Crank
+		rankindex = 1
+	if previousRank != rankindex
+	{
+		if rankindex > previousRank
+			fmod_studio_event_instance_set_parameter_by_name(FMODevent_oneshot("event:/Sfx/UI/rankup"), "state", rankindex - 1)
+		else if rankindex < previousRank
+			fmod_studio_event_instance_set_parameter_by_name(FMODevent_oneshot("event:/Sfx/UI/rankdown"), "state", rankindex - 1)
+		previousRank = rankindex
+		rankScale = 2
+	}
+	var rankX = x - 12
+	var rankY = y + 64
+	draw_sprite_ext(spr_hudRanks, rankindex, rankX, rankY, rankScale, rankScale, 0, c_white, 1)
+	var perc = 0
+	if global.time_attack
+	{
+		perc = rankindex >= 4 ? 1 : 0
+	}
+	else
+	{
+		switch rankindex
+		{
+			case 5:
+				perc = 1
+			break
+			case 4:
+				perc = 0
+			break
+			case 3:
+				perc = (global.collect - global.Arank) / (global.Srank - global.Arank)
+			break
+			case 2:
+				perc = (global.collect - global.Brank) / (global.Arank - global.Brank)
+			break
+			case 1:
+				perc = (global.collect - global.Crank) / (global.Brank - global.Crank)
+			break
+			default:
+				perc = global.collect / global.Crank
+			break
+		}
+	}
+	rankPerc = lerp(rankPerc, perc, 0.1)
+	perc = rankPerc
+	var amt = sprite_get_height(spr_hudRanksFill) * perc
+	var top = sprite_get_height(spr_hudRanksFill) - amt
+	var xo = sprite_get_xoffset(spr_hudRanksFill)
+	var yo = sprite_get_yoffset(spr_hudRanksFill)
+	draw_sprite_part_ext(spr_hudRanksFill, rankindex, 0, top, sprite_get_width(spr_hudRanksFill), sprite_get_height(spr_hudRanksFill) - top,  rankX - xo, rankY - yo + top, rankScale, rankScale, c_white, 1)
+	if obj_player.x < 295 && obj_player.y < 170
+		offset = approach(offset, 300, 50)
+	else {
+		offset = approach(offset, 0, 50)
+	}
+	for (var i = 0; i < array_length(badnum); i++)
+	{
+		draw_set_font(global.badnumfont)
+		draw_set_colour(c_red)
+		draw_set_alpha(badnum[i].alpha)
+		draw_set_halign(fa_center)
+		draw_text(badnum[i].x, badnum[i].y, badnum[i].text)
+		draw_set_alpha(1)
+		draw_set_colour(c_white)
+		badnum[i].y -= 1 / 2
+		badnum[i].alpha -= 1 / 60
+		if badnum[i].alpha <= 0
+		{
+			array_delete(badnum, i, 1)
+			i--
+		}
+	}
+}
+with combometer
+{
+	var _perc = global.combo.timer / 60
+	if state = -1
+	{
+		x = SCREEN_WIDTH - 149 + wave(-5, 5, 2, 0)
+		y = approach(y, -128, 5)
+		if global.combo.amt > 0
+		{
+			state = 0
+			vsp = 15
+		}
+	}
+	else if state == 0
+	{
+		x = SCREEN_WIDTH - 149 + wave(-5, 5, 2, 0)
+		vsp += 0.5
+		y += vsp
+		if y > 210
+			state = 1
+	}
+	else if state == 1
+	{
+		if _perc <= 0.5 && _perc > 0.2
+		{
+			x = SCREEN_WIDTH - 149 + wave(-5, 5, 2, 0) + irandom_range(-2, 2)
+			vsp += 0.3
+			y += vsp
+			if y > 200
+			{
+				y = 200
+				vsp = -2
+			}
+		}
+		else if _perc <= 0.2
+		{
+			x = SCREEN_WIDTH - 149 + wave(-5, 5, 1, 0) + irandom_range(-5, 5)
+			vsp += 0.3
+			y += vsp
+			if y > 200
+			{
+				y = 200
+				vsp = -4
+			}
+		}
+		else {
+			x = SCREEN_WIDTH - 149 + wave(-5, 5, 2, 0)
+			y = lerp(y, 200, 0.1)
+		}
+		if global.combo.amt == 0
+			state = -1
+	}
+	draw_sprite(spr_combo_meter, 1, x, y - other.tv.offset)
+	// Lights
+	for (var i = 0; i < array_length(lights); i++)
+	{
+		var _yOffset = (i + 1) % 2 == 0 ? -5 : 5
+		var q = lights[i]
+		var _lights = array_length(lights) * _perc
+		
+		if arrowx < q.x && q.sprite == spr_comboLights
+		{
+			q.sprite = spr_comboLightsOff
+			
+			if state != -1
+				FMODevent_oneshot("event:/Sfx/UI/Combo/flick", x, y)
+		}
+		else if arrowx >= q.x && q.sprite == spr_comboLightsOff
+			q.sprite = spr_comboLights
+			
+		if q.sprite == spr_comboLights
+		{
+			q.x = x - 72 + (45 * i)
+			q.y = y - 5 + wave(_yOffset, -_yOffset, 5, 0)
+		}
+		if q.sprite == spr_comboLightsOff
+		{
+			q.x = x - 72 + (45 * i)
+			q.y = y - 5 + irandom_range(-1, 1) + wave(_yOffset, -_yOffset, 5, 0)
+		}
+		q.index += 0.1
+		pal_swap_set(spr_comboPalette, global.combo.dropped, false)
+		draw_sprite(q.sprite, q.index, q.x, q.y - other.tv.offset)
+		shader_reset()
+	}
+	var _startPos = lights[3].x + 15
+	var _endPos = lights[0].x - 5
+	var _lights = (array_length(lights) * _perc) / array_length(lights)
+	arrowx = lerp(arrowx, _endPos + ((_startPos - _endPos) * _lights), 0.25)
+	draw_sprite(spr_combo_arrow, 0, arrowx, y - 34 - other.tv.offset)
+	
+	draw_sprite(spr_combo_meter, 0, x, y - other.tv.offset)
+	draw_set_font(global.comboFont)
+	draw_set_halign(fa_left)
+	if combo != global.combo.amt
+	{
+		combo = global.combo.amt
+		shake = 6
+	}
+	var _xx = x - 9 - string_width(combo)
+	var _yy = y + 32 - other.tv.offset
+	shake = approach(shake, 0, 6 / 10)
+	for (var i = 0; i < string_length(combo); i++)
+	{
+		var _str = string_char_at(combo, i + 1)
+		draw_text(_xx + random_range(shake, -shake), _yy + random_range(shake, -shake), _str)
+		_xx += string_width(_str)
+		_yy += 2
+	}
+} 
+
+with tv
+{
+	if sprite_index != spr_tv_turnon
+		draw_sprite(spr_tv_bg, backindex, x, y - offset)
+	pal_swap_set(obj_player.sprites.player_pal, obj_player.palette_index, false)
+	draw_sprite(sprite_index, image_index, x, y - offset)
+	shader_reset()
+	pattern_draw(sprite_index, image_index, x, y - offset, 1, 1, 0, c_white, 1, global.patternSpr, obj_player.sprites.palette_colors)
+	if state == states.move
+		draw_sprite(spr_tv_switch, switchindex, x, y - offset)
+	if sprite_index != spr_tv_turnon
+	{
+		pal_swap_set(spr_tv_palette, obj_player.character + 1, false)
+		draw_sprite(spr_tv_empty, 0, x, y - offset)
+		shader_reset()
+	}
+	if sprite_index == spr_tv_turnon
+	{
+		pal_swap_set(spr_tv_palette, obj_player.character + 1, false)
+		draw_sprite(spr_tv_turnon, image_index, x, y - offset)
+		shader_reset()
+	}
+	if obj_player.x > room_width - 270 && obj_player.y < 320
+		offset = approach(offset, 400, 100)
+	else {
+		offset = approach(offset, 0, 100)
+	}
+}
+
+
+with bar
+{
+	var _escape = global.escape.active == true
+	
+	var roomname = string_letters(room_get_name(room))
+	var _secret = string_pos("secret", roomname) > 0
+	
+	var _timerSource = global.time_attack ? global.time_attack_timer * 60 : global.escape.timer
+	var _sec = wrap(_timerSource / 60, 0, 59)
+	var _seconds = _sec
+	
+	if _sec < 10
+		_seconds = string("0{0}", _sec)
+		
+	var _minutes = wrap(_timerSource / (60 * 60), 0, 59)
+	var _timer = string("{1}:{0}", _seconds, _minutes)
+	
+	draw_set_font(global.bigfont)
+	draw_set_halign(fa_center)
+	
+	var _showTimeAttackTimer = global.time_attack_started
+	if _escape || _showTimeAttackTimer
+	{
+		if ended || global.escape.party
+			y = approach(y, SCREEN_HEIGHT + 100, 1)
+		else {
+			y = approach(y, (_secret && !_showTimeAttackTimer) ? SCREEN_HEIGHT + 100 : SCREEN_HEIGHT - 80, (_secret && !_showTimeAttackTimer) ? 15 : 1)
+		}
+		draw_text(x, y - 24, _timer)
+	}
+	else
+	{
+		y = SCREEN_HEIGHT + 100
+	}
+}
+
+with lapbar
+{
+	var _escape = global.escape.active == true && global.escape.party
+	
+	var roomname = string_letters(room_get_name(room))
+	var _secret = string_pos("secret", roomname) > 0
+	
+	var _active = _escape && !_secret && !instance_exists(obj_hipnatuese)
+	
+	var _sec = wrap(time / 60, 0, 59)
+	var _seconds = _sec
+	
+	if _sec < 10
+		_seconds = string("0{0}", _sec)
+	var _minutes = wrap(time / (60 * 60), 0, 59)
+	var _timer = string("{1}:{0}", _seconds, _minutes)
+	if _active
+	{
+		if time > 30 * 60
+			time = 30 * 60
+		freeze = max(freeze - 1, 0)
+		if freeze == 0
+			time = max(time - 1, 0)
+		if time == 0
+			instance_create(obj_player.x, obj_player.y, obj_hipnatuese)
+		color = approach(color, freeze > 0 ? 1 : 0, 1 / 15)
+		draw_set_colour(merge_colour(c_yellow, c_aqua, color))
+		draw_set_font(global.bigfont)
+		draw_set_halign(fa_center)
+		draw_text(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 80 - 24, _timer)
+	}
+}

@@ -1,0 +1,33 @@
+depth = target.depth + 2
+if target.state == states.mach3
+{
+	x = target.x + (5 * image_xscale)
+	y = target.y + 5
+	image_angle = 0
+	image_xscale = target.xscale
+}
+else if target.state == states.hammerattack && target.movespeed >= 16
+{
+	x = target.x + (5 * image_xscale)
+	y = target.y + 5
+	image_angle = 0
+	image_xscale = target.xscale
+}
+else if target.state == states.groundpound
+{
+	x = target.x
+	y = target.y + 20
+	image_angle = -90
+	image_xscale = 1
+}
+else if target.state == states.gunkMove
+{
+	x = target.x + (5 * image_xscale)
+	y = target.y + 5
+	image_angle = 0
+	image_xscale = target.xscale
+}
+else 
+{
+	instance_destroy()
+}

@@ -1,0 +1,2 @@
+TVsprite = spr_mainmenu_tv_empty
+TVBackSprite = spr_mainmenu_tv1_idle
